@@ -18,7 +18,7 @@ public class RegController {
     private TextArea textArea;
 
     public void tryToReg(ActionEvent actionEvent) {
-        controller.tryToReg(loginField.getText().trim(),
+        controller.tryToReg(loginField.getText().trim().toLowerCase(),
                 passwordField.getText().trim(),
                 nickField.getText().trim());
     }

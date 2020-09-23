@@ -3,6 +3,7 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -17,7 +18,13 @@ public class Server {
 
     public Server() {
         clients = new Vector<>();
-        authService = new SimpleAuthService();
+
+        try {
+            authService = new SQLiteAuthService();
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+            return;  // Выход
+        }
 
         try {
             server = new ServerSocket(PORT);
