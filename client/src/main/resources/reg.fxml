@@ -1,6 +1,6 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<VBox fx:controller="chat.client.RegController"
+<VBox fx:controller="client.RegController"
       xmlns:fx="http://javafx.com/fxml" alignment="center" >
 
     <HBox>

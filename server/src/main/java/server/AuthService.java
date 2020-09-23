@@ -1,4 +1,4 @@
-package chat.server;
+package server;
 
 public interface AuthService {
     /**

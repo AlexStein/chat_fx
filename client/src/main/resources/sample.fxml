@@ -1,6 +1,6 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<VBox fx:controller="chat.client.Controller"
+<VBox fx:controller="client.Controller"
       xmlns:fx="http://javafx.com/fxml" alignment="center">
 
     <HBox fx:id="authPanel" visible="true" managed="true">
