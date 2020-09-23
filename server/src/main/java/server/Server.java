@@ -120,6 +120,9 @@ public class Server {
         broadcastClientList();
     }
 
+    public void rename_user() {
+        broadcastClientList();
+    }
 
     public boolean isLoginAuthenticated(String login) {
         for (ClientHandler c : clients) {

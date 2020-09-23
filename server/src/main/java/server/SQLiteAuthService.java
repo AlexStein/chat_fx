@@ -8,6 +8,7 @@ public class SQLiteAuthService implements AuthService {
     private static Statement statement;
     private static PreparedStatement psInsertUser;
     private static PreparedStatement psSelectUser;
+    private static PreparedStatement psUpdateUser;
 //    private static PreparedStatement psInsertHistory;
 //    private static PreparedStatement psInsertPrivateHistory;
     private static ResultSet resultSet;
@@ -41,16 +42,16 @@ public class SQLiteAuthService implements AuthService {
                 "nickname VARCHAR(255) NOT NULL,\n" +
                 "created_at DATETIME DEFAULT CURRENT_TIMESTAMP);";
 
-        String createHistory = "CREATE TABLE IF NOT EXISTS history (\n" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
-                "sender VARCHAR(255) NOT NULL,\n" +
-                "receiver VARCHAR(255),\n" +
-                "message TEXT NOT NULL,\n" +
-                "sent_at DATETIME DEFAULT CURRENT_TIMESTAMP);";
+//        String createHistory = "CREATE TABLE IF NOT EXISTS history (\n" +
+//                "id INTEGER PRIMARY KEY AUTOINCREMENT,\n" +
+//                "sender VARCHAR(255) NOT NULL,\n" +
+//                "receiver VARCHAR(255),\n" +
+//                "message TEXT NOT NULL,\n" +
+//                "sent_at DATETIME DEFAULT CURRENT_TIMESTAMP);";
         try {
             connection.setAutoCommit(false);
             statement.execute(createUsers);
-            statement.execute(createHistory);
+//            statement.execute(createHistory);
             connection.setAutoCommit(true);
 
         } catch (SQLException e) {
@@ -85,6 +86,7 @@ public class SQLiteAuthService implements AuthService {
 
     private static void prepareAllStatements() throws SQLException {
         psInsertUser = connection.prepareStatement("INSERT INTO users (login, password, nickname) VALUES (?, ?, ?);");
+        psUpdateUser = connection.prepareStatement("UPDATE users SET nickname = ? WHERE login=?;");
         psSelectUser = connection.prepareStatement("SELECT nickname FROM users WHERE login=? AND password=?;");
 //        psInsertHistory = connection.prepareStatement("INSERT INTO history (sender,message) VALUES (?, ?);");
 //        psInsertPrivateHistory = connection.prepareStatement("INSERT INTO history (sender, receiver, message) VALUES (?, ?, ?);");
@@ -131,6 +133,21 @@ public class SQLiteAuthService implements AuthService {
             e.printStackTrace();
         }
 
-        return true;
+        return false;
+    }
+
+    @Override
+    public boolean updateNickname(String login, String nickname) {
+        try {
+            psUpdateUser.setString(1, nickname);
+            psUpdateUser.setString(2, login);
+            int rowsUpdated = psUpdateUser.executeUpdate();
+            return (rowsUpdated > 0);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }
