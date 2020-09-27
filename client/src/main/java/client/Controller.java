@@ -18,9 +18,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -50,8 +48,11 @@ public class Controller implements Initializable {
     DataOutputStream out;
 
     private boolean authenticated;
+    private String login;
     private String nickname;
     private final String TITLE = "Флудилка";
+
+    private FileWriter logFile;
 
     private Stage stage;
     private Stage regStage;
@@ -130,6 +131,14 @@ public class Controller implements Initializable {
                             textArea.appendText(str + "\n");
                         }
 
+                        String logFilename = String.format("history_%s.txt", login);
+
+                        // Последние 100 строк истории чата.
+                        loadLog(logFilename, 100);
+
+                        // Открываем файл на добавление
+                        logFile = new FileWriter(logFilename, true);
+
                         //цикл работы
                         while (true) {
                             String str = in.readUTF();
@@ -149,6 +158,7 @@ public class Controller implements Initializable {
                                 }
                             } else {
                                 textArea.appendText(str + "\n");
+                                logFile.write(str + "\n");
                             }
                         }
                     } catch (RuntimeException e) {
@@ -160,6 +170,7 @@ public class Controller implements Initializable {
                         setAuthenticated(false);
                         try {
                             socket.close();
+                            logFile.close();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -187,9 +198,11 @@ public class Controller implements Initializable {
             connect();
         }
 
+        login = loginField.getText().trim().toLowerCase();
+        String passwd = passwordField.getText().trim();
+
         try {
-            out.writeUTF(String.format("/auth %s %s", loginField.getText().trim().toLowerCase(),
-                    passwordField.getText().trim()));
+            out.writeUTF(String.format("/auth %s %s", login, passwd));
             passwordField.clear();
 
         } catch (IOException e) {
@@ -245,5 +258,38 @@ public class Controller implements Initializable {
 
 
         System.out.println(msg);
+    }
+
+    /**
+     * Загрузка последних сообщений из лога и вывод в чат
+     *
+     * @param logFilename Имя файл лога
+     * @param size        количество сообщений
+     */
+    private void loadLog(String logFilename, int size) {
+        String[] logLines = new String[size];
+        int pointer = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(logFilename))) {
+            String logLine;
+            while ((logLine = reader.readLine()) != null) {
+                logLines[pointer % size] = logLine;
+                pointer++;
+            }
+        } catch (IOException e) {
+            System.out.println("Ошибка чтения файла истории");
+            return;
+        }
+
+        // Отматываем назад
+        int start = pointer - size;
+        if (start < 0) {
+            start = 0;
+        }
+
+        // От номера строки -100 до последней.
+        for (int i = start; i < pointer; i++) {
+            textArea.appendText(logLines[i % size] + "\n");
+        }
+
     }
 }
