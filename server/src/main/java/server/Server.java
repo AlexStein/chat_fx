@@ -3,13 +3,18 @@ package server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class Server {
     private List<ClientHandler> clients;
+    private Connection connection;
     private AuthService authService;
+    private HistoryService historyService;
 
     private int PORT = 8189;
     ServerSocket server = null;
@@ -17,7 +22,24 @@ public class Server {
 
     public Server() {
         clients = new Vector<>();
-        authService = new SimpleAuthService();
+
+        try {
+            Class.forName("org.sqlite.JDBC");
+            connection = DriverManager.getConnection("jdbc:sqlite:chat_fx.db");
+            authService = new SQLiteAuthService(connection);
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+            return;  // Выход
+        }
+
+        try {
+            historyService = new SQLiteHistoryService(connection);
+        } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+            // Если чтото не так, то будут дальше ошибки при
+            // сохранении. Это допустимо.
+            // Сервер может работать и без истрии
+        }
 
         try {
             server = new ServerSocket(PORT);
@@ -53,14 +75,15 @@ public class Server {
      */
     public void broadcastMsg(ClientHandler sender, String msg) {
         SimpleDateFormat formater = new SimpleDateFormat("HH:mm:ss");
-        String message = String.format(" %s %s : %s", formater.format(new Date()), sender.getNickname(), msg);
+        String message = String.format("%s %s : %s", formater.format(new Date()), sender.getNickname(), msg);
         for (ClientHandler c : clients) {
             if (!c.equals(sender)) {
                 c.sendMsg(message);
             }
         }
         // Сообщение отправителю
-        sender.sendMsg(String.format("Я : %s", msg));
+        sender.sendMsg(String.format("%s Я : %s", formater.format(new Date()), msg));
+        historyService.saveMessage(sender.getNickname(), msg);
     }
 
     /**
@@ -100,8 +123,8 @@ public class Server {
             message = String.format("Пользователь %s не найден", targetNickname);
         }
         sender.sendMsg(message);
+        historyService.savePrivateMessage(sender.getNickname(), targetNickname, msg);
     }
-
 
     public void subscribe(ClientHandler clientHandler) {
         clients.add(clientHandler);
@@ -113,6 +136,9 @@ public class Server {
         broadcastClientList();
     }
 
+    public void rename_user() {
+        broadcastClientList();
+    }
 
     public boolean isLoginAuthenticated(String login) {
         for (ClientHandler c : clients) {

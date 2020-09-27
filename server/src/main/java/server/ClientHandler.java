@@ -81,6 +81,21 @@ public class ClientHandler {
                                 out.writeUTF("/end");
                                 break;
                             }
+
+                            if (str.startsWith("/rename")) {
+                                String[] token = str.split("\\s");
+                                if (token.length < 2) {
+                                    continue;
+                                }
+                                nickname = token[1];
+                                boolean b = server.getAuthService()
+                                    .updateNickname(login, nickname);
+                                if (b) {
+                                    server.rename_user();
+                                }
+                                continue;
+                            }
+
                             if (str.startsWith("/w")) {
                                 String[] token = str.split("\\s+", 3);
                                 if (token.length < 3) {
