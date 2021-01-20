@@ -9,8 +9,12 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.logging.*;
 
 public class Server {
+
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
+
     private List<ClientHandler> clients;
     private Connection connection;
     private AuthService authService;
@@ -23,44 +27,63 @@ public class Server {
     public Server() {
         clients = new Vector<>();
 
+        Handler fileHandler;
+        try {
+            fileHandler = new FileHandler("server_%g.log",10 * 1024, 5, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;  // Выход
+        }
+        fileHandler.setFormatter(new SimpleFormatter());
+
+        logger.addHandler(fileHandler);
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.INFO);
+
         try {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:chat_fx.db");
             authService = new SQLiteAuthService(connection);
         } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
+            logger.severe("Ошибка подключения к базе данных");
+            logger.severe(e.getMessage());
+            logger.info("Выход");
             return;  // Выход
         }
 
         try {
             historyService = new SQLiteHistoryService(connection);
         } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
             // Если чтото не так, то будут дальше ошибки при
             // сохранении. Это допустимо.
             // Сервер может работать и без истрии
+            logger.severe("Ошибка запуска истории чатов");
+            logger.severe(e.getMessage());
         }
 
         try {
             server = new ServerSocket(PORT);
-            System.out.println("Сервер запущен");
+            logger.info("Сервер запущен");
 
             while (true) {
                 socket = server.accept();
-                System.out.println("Клиент подключился");
-
-                new ClientHandler(this, socket);
+                logger.info("Клиент подключился");
+                new ClientHandler(this, socket, logger);
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.severe("Ошибка сервера");
+            logger.severe(e.getMessage());
+
         } finally {
             try {
                 server.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                logger.severe("Ошибка закрытия сокета сервера");
+                logger.severe(e.getMessage());
             }
         }
+        logger.info("Выход");
     }
 
     public AuthService getAuthService() {
@@ -84,6 +107,7 @@ public class Server {
         // Сообщение отправителю
         sender.sendMsg(String.format("%s Я : %s", formater.format(new Date()), msg));
         historyService.saveMessage(sender.getNickname(), msg);
+        logger.fine(String.format("Сообщение %s: %s", sender.getNickname(), msg));
     }
 
     /**
@@ -96,6 +120,7 @@ public class Server {
         for (ClientHandler c : clients) {
             c.sendMsg(message);
         }
+        logger.fine(String.format("Сообщение сервера: %s", msg));
     }
 
     /**
